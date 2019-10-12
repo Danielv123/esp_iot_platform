@@ -39,8 +39,8 @@ namespace iot_BME280_influx_exporter
                             Console.WriteLine($"Topic: {topic}. Message Received: {payload}");
                             string[] topicParts = topic.Split("/");
                             // "temperature, type="weather", device="mcu12390u0adaksnjl", value=25.23, timestamp (optional, nanosecond unix time)
-                            string influxPayload = topicParts[2]+",type="+topicParts[1]+",device="+topicParts[3]+" value="+payload;
-                            var response = webclient.UploadString("http://192.168.10.37:8086/write?db=iot", influxPayload);
+                            string influxPayload = topicParts[2] + ",type=" + topicParts[1] + ",device=" + topicParts[3] + " value=" + payload;
+                            var response = webclient.UploadString("http://192.168.10.31:8086/write?db=iot", influxPayload);
                             //Console.WriteLine(response);
                         }
                     }
