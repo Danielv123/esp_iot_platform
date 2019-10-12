@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <RootNamespace>iot_BME280_influx_exporter</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="3.0.8" />
+    <PackageReference Include="SmartFormat.NET" Version="2.4.2" />
+  </ItemGroup>
+
+</Project>
