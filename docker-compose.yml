@@ -1,0 +1,41 @@
+version: '3.3'
+services:
+  influxdb:
+    ports:
+      - '8086:8086'
+    volumes:
+      - './config/influxdb.conf:/etc/influxdb/influxdb.conf:ro'
+      - '/srv/influxdb:/var/lib/influxdb'
+    environment:
+      - INFLUXDB_DB=iot
+      - INFLUXDB_USER=iot_user
+      - INFLUXDB_USER_PASSWORD=iot_super_secret_password
+    restart: unless-stopped
+    image: influxdb
+  eclipse-mosquitto:
+    ports:
+      - '1883:1883'
+    volumes:
+      - './config/mosquitto.conf:/mosquitto/config/mosquitto.conf'
+      - /mosquitto/data
+      - /mosquitto/log
+    restart: unless-stopped
+    image: eclipse-mosquitto
+  influx-exporter:
+    depends-on:
+      - eclipse-mosquitto
+      - influxdb
+    build:
+      context: .
+      dockerfile: influx-exporter.dockerfile
+    image: esp-iot-bme280-influx-exporter
+    environment:
+      - INFLUXDB_URL=http://influxdb:8086/write?db=iot
+      - MQTT_URI=eclipse-mosquitto
+      - MQTT_PORT=1883
+      - MQTT_USER=danielv
+      - MQTT_PASSWORD=placeholder
+      - MQTT_SECURE=false
+    restart: unless-stopped
+
+
