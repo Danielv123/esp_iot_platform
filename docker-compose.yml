@@ -25,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: influx-exporter.dockerfile
-    image: esp-iot-bme280-influx-exporter
+    image: danielvestol/mqtt-influx-exporter
     environment:
       - INFLUXDB_URL=http://influxdb:8086/write?db=iot
       - MQTT_URI=eclipse-mosquitto
