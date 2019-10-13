@@ -22,9 +22,6 @@ services:
     restart: unless-stopped
     image: eclipse-mosquitto
   influx-exporter:
-    depends-on:
-      - eclipse-mosquitto
-      - influxdb
     build:
       context: .
       dockerfile: influx-exporter.dockerfile
