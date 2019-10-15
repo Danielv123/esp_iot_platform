@@ -16,7 +16,7 @@ namespace iot_BME280_influx_exporter
         static void Main(string[] args)
         {
             WebClient webclient = new WebClient();
-            Console.WriteLine("Hello World!");
+            Console.WriteLine("Started mqtt influx exporter");
             Task.Run(async () =>
             {
                 await ConnectAsync();
@@ -69,25 +69,13 @@ namespace iot_BME280_influx_exporter
         {
             string clientId = Guid.NewGuid().ToString();
             string mqttURI = "localhost";
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MQTT_URI")))
-            {
-                mqttURI = Environment.GetEnvironmentVariable("MQTT_URI");
-            }
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MQTT_URI"))) mqttURI = Environment.GetEnvironmentVariable("MQTT_URI");
             string mqttUser = "danielv";
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MQTT_USER")))
-            {
-                mqttUser = Environment.GetEnvironmentVariable("MQTT_USER");
-            }
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MQTT_USER"))) mqttUser = Environment.GetEnvironmentVariable("MQTT_USER");
             string mqttPassword = "aq12wsxc";
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MQTT_PASSWORD")))
-            {
-                mqttPassword = Environment.GetEnvironmentVariable("MQTT_PASSWORD");
-            }
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MQTT_PASSWORD"))) mqttPassword = Environment.GetEnvironmentVariable("MQTT_PASSWORD");
             int mqttPort = 1883;
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MQTT_PORT")))
-            {
-                mqttPort = Int32.Parse(Environment.GetEnvironmentVariable("MQTT_PORT"));
-            }
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MQTT_PORT"))) mqttPort = Int32.Parse(Environment.GetEnvironmentVariable("MQTT_PORT"));
             bool mqttSecure = Environment.GetEnvironmentVariable("MQTT_SECURE") == "true";
             var messageBuilder = new MqttClientOptionsBuilder()
                 .WithClientId(clientId)
