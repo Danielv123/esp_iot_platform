@@ -10,6 +10,8 @@ services:
       - INFLUXDB_DB=iot
       - INFLUXDB_USER=iot_user
       - INFLUXDB_USER_PASSWORD=iot_super_secret_password
+      - INFLUXDB_HTTP_LOG_ENABLED=false
+      - INFLUXDB_DATA_QUERY_LOG_ENABLED=false
     restart: unless-stopped
     image: influxdb
   eclipse-mosquitto:
