@@ -3,6 +3,8 @@ services:
   influxdb:
     ports:
       - '8086:8086'
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     volumes:
       - './config/influxdb.conf:/etc/influxdb/influxdb.conf:ro'
       - '/srv/influxdb:/var/lib/influxdb'
@@ -17,6 +19,8 @@ services:
   eclipse-mosquitto:
     ports:
       - '1883:1883'
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     volumes:
       - './config/mosquitto.conf:/mosquitto/config/mosquitto.conf'
       - /mosquitto/data
@@ -28,6 +32,8 @@ services:
       context: .
       dockerfile: influx-exporter.dockerfile
     image: danielvestol/mqtt-influx-exporter
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     environment:
       - INFLUXDB_URL=http://influxdb:8086/write?db=iot
       - MQTT_URI=eclipse-mosquitto
@@ -39,8 +45,10 @@ services:
     restart: unless-stopped
   watchtower:
     image: v2tec/watchtower
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /root/.docker/config.json:/config.json
+      - ~/.docker/config.json:/config.json
     command: --interval 30
 
