@@ -35,6 +35,12 @@ services:
       - MQTT_USER=danielv
       - MQTT_PASSWORD=placeholder
       - MQTT_SECURE=false
+      - LOG_MQTT=false
     restart: unless-stopped
-
+  watchtower:
+    image: v2tec/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /root/.docker/config.json:/config.json
+    command: --interval 30
 

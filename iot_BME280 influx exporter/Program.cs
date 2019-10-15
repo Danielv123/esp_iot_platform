@@ -36,7 +36,7 @@ namespace iot_BME280_influx_exporter
                         if (string.IsNullOrWhiteSpace(topic) == false)
                         {
                             string payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
-                            Console.WriteLine($"Topic: {topic}. Message Received: {payload}");
+                            if (Environment.GetEnvironmentVariable("LOG_MQTT").ToLower() == "true") Console.WriteLine($"Topic: {topic}. Message Received: {payload}");
                             string[] topicParts = topic.Split("/");
                             // "temperature, type="weather", device="mcu12390u0adaksnjl", value=25.23, timestamp (optional, nanosecond unix time)
                             string influxPayload = topicParts[2] + ",type=" + topicParts[1] + ",device=" + topicParts[3] + " value=" + payload;
