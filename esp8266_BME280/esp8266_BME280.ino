@@ -13,7 +13,26 @@ ESP D1 - BME280 SDL
 ESP GND - BME280 GND
 ESP 3v3 - BME280 VCC
 
+MQ135 expansion
+ESP A0 - 1000ohm - MQ135 A0
+ESP GND - 2000ohm - MQ135 A0
+ESP GND - MQ135 GND
+ESP Vin - MQ135 VCC
+
 */
+
+/*
+
+Settings
+
+*/
+// BME280 = false or BMP280 = true
+bool useBME = true;
+bool useMQ135 = false;
+
+#include <MQUnifiedsensor.h>
+MQUnifiedsensor MQ135(A0, 5);
+
 #include <Ticker.h>
 #include <Adafruit_BME280.h>
 #include <ESP8266WiFi.h>
@@ -34,7 +53,11 @@ char clientId[90]; // Generated on mqtt connection
 #include <jled.h>
 
 // Sensor libraries
+#include <Adafruit_BMP280.h>
 #include <Adafruit_BME280.h>
+Adafruit_BME280 bme280;
+Adafruit_BMP280 bmp280;
+#define BMP280_I2C_ADDRESS  0x76 // 0x77 or 0x76, depending on wether SDO is wired to 3.3v or GND
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_Sensor.h>
@@ -46,38 +69,30 @@ char clientId[90]; // Generated on mqtt connection
 bool ota_started;
 
 // BME280 weather sensor
-/*
-const int BME_SCK = 6;
-const int BME_MISO = 4;
-const int BME_MOSI = 7;
-const int BME_CS = 5;
-*/
-#define BME_SCK 13
-#define BME_MISO 12
-#define BME_MOSI 11
-#define BME_CS 10
-Adafruit_BME280 bme280;
 #define SEALEVELPRESSURE_HPA (1013.25)
 
-char* ssid = "Superbox";
+char* ssid = "unifi_iot";
 char* password = "aq12wsxc";
 //const char* mqtt_server = "mqtt.eclipse.org";
 char* mqtt_server = "192.168.10.31";
 
 Ticker ticker;
 bool sendUpdate;
-float fTemp;
-float bPress;
+float cTemp;
+float mbPress;
 float rH;
 float dPoint;
 float hIndex;
+float airQualityPPM;
 
 void setup()
 {
 	pinMode(D0, OUTPUT);
 	pinMode(D4, OUTPUT);
 	pinMode(D6, INPUT_PULLUP);
-	
+
+	delay(1000);
+
 	// Try reading parameters from EEPROM
 	EEPROM.begin(512);
 	delay(500);
@@ -94,12 +109,24 @@ void setup()
 		password = stored_password;
 		mqtt_server = stored_mqtt_server;
 	}
+	Wire.begin(SDA, SCL);
 	Serial.begin(115200);
-	bool status;
-	status = bme280.begin();
-	if (!status) {
-		Serial.println("Could not find a valid BME280 sensor, check wiring!");
+
+	bool bmeStatus;
+	bool bmpStatus;
+	bmeStatus = bme280.begin();
+	bmpStatus = bmp280.begin(BMP280_I2C_ADDRESS);
+	if (!bmeStatus && !bmpStatus) {
+		Serial.println("Could not find a valid BME280 or BMP280 sensor, check wiring!");
 		while (1);
+	}
+	else if (bmeStatus) {
+		Serial.println("Found BME280 sensor");
+		useBME = true;
+	}
+	else if (bmpStatus) {
+		Serial.println("Found BMP280 sensor, humidity measurement disabled");
+		useBME = false;
 	}
 	delay(100);
 	ConnectToWiFi();
@@ -115,9 +142,22 @@ void setup()
 	client.setCallback(callback);
 }
 // Status LEDs
-auto led_wifi_connected = JLed(D4).LowActive().Breathe(3000).DelayAfter(1500).Forever();
+auto led_wifi_connected = JLed(D4).LowActive().Breathe(3000).DelayAfter(1000).Forever();
+auto led_wifi_error = JLed(D4).LowActive().Blink(100, 100).Forever();
 auto led_error = JLed(D0).LowActive().Blink(100, 100).Forever();
 
+/*
+	LED status guide
+
+	Slow pulsing:
+	Everything works, messages are being published to MQTT
+
+	One flashing:
+	WIFI Connection error
+
+	Both flashing:
+	MQTT Connection error
+*/
 void loop()
 {
 	if (WiFi.isConnected()) {
@@ -125,21 +165,26 @@ void loop()
 		digitalWrite(D0, HIGH);
 		// Ensure MQTT stays connected as well
 		if (!client.connected()) {
+			led_wifi_error.Update();
+			led_error.Update();
 			mqttReconnect();
-		} else if (sendUpdate){
+		}
+		else if (sendUpdate) {
 			// Send through MQTT if we are connected
 			// The following values are set in readSensors, which runs on an interval using Ticker
 			sendUpdate = false;
-			publishStatistic("temperature", fTemp);
-			publishStatistic("humidity", rH);
-			publishStatistic("pressure", bPress);
+			publishStatistic("temperature", cTemp);
+			publishStatistic("pressure", mbPress);
+			if (useBME) publishStatistic("humidity", rH);
+			if (useMQ135) publishStatistic("MQ135", airQualityPPM);
 		}
 		client.loop();
-	} else {
+	}
+	else {
 		digitalWrite(D4, HIGH);
 		led_error.Update();
 	}
-	
+
 	//Serial.println("Hello world");
 	HandleOTA();
 }
@@ -147,15 +192,27 @@ void readSensors() {
 	// This is a Ticker callback, which is interupt based. Sending network calls from here causes the mcu firmware to crash.
 	// Instead, we set a flag and do the network calls in loop() instead.
 	sendUpdate = true;
-	fTemp = bme280.readTemperature(); // In Celcius
-	bPress = bme280.readPressure() / 100.0F; // In mBar
-	//Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA)); // IN meters
-	rH = bme280.readHumidity(); // In %
-
+	if (useBME) {
+		cTemp = bme280.readTemperature(); // In Celcius
+		mbPress = bme280.readPressure() / 100.0F; // In mBar
+		//Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA)); // IN meters
+		rH = bme280.readHumidity(); // In %
+	}
+	else {
+		cTemp = bmp280.readTemperature(); // In Celcius
+		mbPress = bmp280.readPressure() / 100.0F; // In mBar
+		rH = 0; // In %
+	}
+	if (useMQ135) {
+		// airQualityPPM = MQ135.readSensor();
+		airQualityPPM = analogRead(A0);
+		Serial.print(analogRead(A0), DEC);
+		Serial.print("\n");
+	}
 	//Serial.print("Dew Point = ");
-	dPoint = fTemp - ((100 - rH) / 5);
+	dPoint = cTemp - ((100 - rH) / 5);
 	//Serial.print("Heat Index = ");
-	hIndex = 0.5 * (fTemp + 61.0 + ((fTemp - 68.0) * 1.2) + (rH * 0.094));
+	hIndex = 0.5 * (cTemp + 61.0 + ((cTemp - 68.0) * 1.2) + (rH * 0.094));
 
 }
 void publishStatistic(char* statistic, float data) {
@@ -247,7 +304,12 @@ void mqttReconnect() {
 	memset(clientId, 0, sizeof clientId);
 	strcat(clientId, prefix);
 	strcat(clientId, x);
-	strcat(clientId, "|BME280");
+	if (useBME) {
+		strcat(clientId, "|BME280");
+	}
+	else {
+		strcat(clientId, "|BMP280");
+	}
 	// Attempt to connect
 	if (client.connect(clientId)) {
 		Serial.println("connected");
@@ -255,7 +317,12 @@ void mqttReconnect() {
 		char idChar[] = "hello";
 		client.publish("iot_discovery", clientId);
 		// ... and resubscribe
-		client.subscribe("BME280_CMD");
+		if (useBME) {
+			client.subscribe("BME280_CMD");
+		}
+		else {
+			client.subscribe("BMP280_CMD");
+		}
 	}
 	else {
 		Serial.print("failed, rc=");

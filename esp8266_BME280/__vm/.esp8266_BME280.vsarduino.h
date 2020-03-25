@@ -21,7 +21,7 @@
 #define NONOSDK221 1
 #define F_CPU 160000000L
 #define LWIP_OPEN_SRC
-#define TCP_MSS 536
+#define TCP_MSS 1460
 #define LWIP_FEATURES 1
 #define LWIP_IPV6 0
 #define ARDUINO 108010
